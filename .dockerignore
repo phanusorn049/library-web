@@ -1,9 +1,7 @@
 .git
 .gitignore
 __pycache__/
-*.sql
-*.pem
-certs/
+*.key
 db_config.php
 setup_once.php
 test_gemini.php
