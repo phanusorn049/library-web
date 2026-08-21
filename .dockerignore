@@ -1,0 +1,10 @@
+.git
+.gitignore
+__pycache__/
+*.sql
+*.pem
+certs/
+db_config.php
+setup_once.php
+test_gemini.php
+check_db.php

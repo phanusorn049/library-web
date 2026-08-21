@@ -1,0 +1,13 @@
+Options -Indexes
+
+<FilesMatch "^(bootstrap|db_config|gemini_config)\.php$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^setup_once\.php$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(pem|py|pyc)$">
+    Require all denied
+</FilesMatch>
