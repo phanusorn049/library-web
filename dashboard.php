@@ -236,8 +236,8 @@ PROMPT;
         CURLOPT_CAINFO => __DIR__ . '/certs/cacert.pem',
         CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . trim($apiKey)],
         CURLOPT_POSTFIELDS => json_encode($postData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-        CURLOPT_CONNECTTIMEOUT => 3,
-        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 30,
         CURLOPT_SSL_VERIFYPEER => true
     ]);
 
