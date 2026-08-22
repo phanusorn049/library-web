@@ -226,7 +226,7 @@ PROMPT;
         "contents" => [["role" => "user", "parts" => [["text" => $promptText]]]],
         // ภาษาไทยใช้ token ค่อนข้างมาก จึงเผื่อจำนวน token เพื่อไม่ให้คำตอบ
         // ถูกตัดกลางประโยคเมื่อ Gemini สรุปครบทุกข้อ
-        "generationConfig" => ["temperature" => 0.2, "maxOutputTokens" => 2048]
+        "generationConfig" => ["temperature" => 0.2, "maxOutputTokens" => 512]
     ];
 
     $ch = curl_init($url);
@@ -237,7 +237,7 @@ PROMPT;
         CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . trim($apiKey)],
         CURLOPT_POSTFIELDS => json_encode($postData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT => 60,
         CURLOPT_SSL_VERIFYPEER => true
     ]);
 
