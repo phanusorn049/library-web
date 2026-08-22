@@ -177,7 +177,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_ai_analysis') {
     header('Content-Type: application/json; charset=utf-8');
     require_once __DIR__ . '/gemini_config.php';
 
-    $aiModel = defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.5-flash';
+    $aiModel = defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-3.5-flash';
     $apiKey  = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '';
     $url     = defined('GEMINI_API_URL') ? GEMINI_API_URL : '';
 
