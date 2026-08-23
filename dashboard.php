@@ -172,7 +172,7 @@ $topBorrowShareCount = (int)(mysqli_fetch_assoc(mysqli_stmt_get_result($stmtTopS
 mysqli_stmt_close($stmtTopShare);
 $topBorrowShare = $totalBorrow > 0 ? round(($topBorrowShareCount / $totalBorrow) * 100, 1) : 0;
 
-// ---------------- 🤖 7. Async AJAX API Endpoint สำหรับ Gemini AI ----------------
+// ---------------- 🤖 Async AJAX API Endpoint สำหรับ Gemini AI ----------------
 if (isset($_GET['action']) && $_GET['action'] === 'get_ai_analysis') {
     header('Content-Type: application/json; charset=utf-8');
     require_once __DIR__ . '/gemini_config.php';
@@ -203,7 +203,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_ai_analysis') {
     $promptText = <<<PROMPT
 คุณคือ AI ผู้ช่วยวิเคราะห์ข้อมูลสำหรับผู้ดูแลห้องสมุด
 
-วิเคราะห์ข้อมูล Dashboard ต่อไปนี้ โดยใช้เฉพาะข้อมูลที่ให้มา
+วิเคราะห์ข้อมูล Dashboard ต่อไปนี้ โดยใช้เฉพาะข้อมูลที่ให้มา:
 ช่วงเวลาที่เลือก: {$filter}
 ยอดยืมรวม: {$totalBorrow} ครั้ง
 จำนวนหนังสือที่ถูกยืมแบบไม่ซ้ำ: {$totalBooks} เล่ม
@@ -217,21 +217,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_ai_analysis') {
 {$topBooksText}
 
 ข้อกำหนดคำตอบ:
-1. ตอบเป็นภาษาไทยเท่านั้น ห้ามใช้ภาษาอังกฤษหรือ Markdown
-2. ตอบตามแม่แบบนี้เท่านั้น โดยแทนที่ข้อความในวงเล็บ:
-1. ภาพรวมการใช้งาน: (สรุปยอดยืม 1 ประโยค)
-2. หมวดหมู่ยอดนิยม: (สรุปหมวดหมู่ 1 ประโยค)
-3. หนังสือที่ควรส่งเสริม: (เสนอจากข้อมูลที่ให้ 1 ประโยค)
-4. ข้อเสนอแนะ: (เสนอแนวทาง 1 ประโยค)
-3. ต้องมีครบ 4 ข้อ เริ่มด้วย 1. และจบด้วยข้อ 4. เท่านั้น
-4. ห้ามคัดลอกคำสั่ง ตัวอย่าง หรือข้อความภาษาอังกฤษจากข้อมูลเข้ามาในคำตอบ
+1. ตอบเป็นภาษาไทยเท่านั้น
+2. ตอบเป็นรายการ 4 ข้อ แต่ละข้อให้ขึ้นบรรทัดใหม่ชัดเจนตามแม่แบบนี้เท่านั้น:
+1. ภาพรวมการใช้งาน: [สรุปยอดยืม 1 ประโยค]
+2. หมวดหมู่ยอดนิยม: [สรุปหมวดหมู่ยืมสูงสุด 1 ประโยค]
+3. หนังสือที่ควรส่งเสริม: [เสนอแนวทางส่งเสริม 1 ประโยค]
+4. ข้อเสนอแนะ: [ข้อเสนอแนะภาพรวม 1 ประโยค]
+3. ห้ามรวมบรรทัด ให้แยกบรรทัดข้อ 1, 2, 3, 4 ออกจากกันอย่างเด็ดขาด
+4. ห้ามใส่คำเกริ่นหรือสรุปปิดท้าย นอกเหนือจาก 4 ข้อที่กำหนด
 PROMPT;
 
     $postData = [
         "contents" => [["role" => "user", "parts" => [["text" => $promptText]]]],
-        // ภาษาไทยใช้ token ค่อนข้างมาก จึงเผื่อจำนวน token เพื่อไม่ให้คำตอบ
-        // ถูกตัดกลางประโยคเมื่อ Gemini สรุปครบทุกข้อ
-        "generationConfig" => ["temperature" => 0.2, "maxOutputTokens" => 768]
+        "generationConfig" => ["temperature" => 0.2, "maxOutputTokens" => 1024]
     ];
 
     $ch = curl_init($url);
@@ -337,7 +335,7 @@ th,td{ padding:12px; border-bottom:1px solid #f1f5f9; text-align:left; font-size
 th{ background:#f8fafc; color:#64748b; font-weight:600; }
 .badge{ background:#fee2e2; color:#ef4444; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; }
 
-/* 🤖 AI Card Style - แก้ไขความสูงให้ยืดตามเนื้อหา และจัดการตัดคำ/จัดบรรทัด */
+/* 🤖 AI Card Style - ปรับปรุงการจัดแสดงข้อความและการเว้นบรรทัด */
 .ai { 
     background: #064e3b; 
     color: #ecfdf5; 
@@ -350,8 +348,11 @@ th{ background:#f8fafc; color:#64748b; font-weight:600; }
 .ai-content { 
     font-size: 14px; 
     line-height: 1.8; 
-    overflow-wrap: anywhere;
-    white-space: pre-line; 
+    word-break: break-word;
+    white-space: normal;
+}
+.ai-content div.item {
+    margin-bottom: 10px;
 }
 .ai-content strong { color: #6ee7b7; font-weight: 600; }
 
@@ -616,20 +617,30 @@ new Chart(trendCtx, {
     }
 });
 
-// 2. แปลงข้อความ AI เป็น HTML อย่างปลอดภัย แล้วคงรูปแบบการขึ้นบรรทัดไว้
+// 2. ฟังก์ชันจัดรูปแบบข้อความ AI ให้ออกมาเป็น HTML ที่อ่านง่าย เว้นวรรคแยกข้อชัดเจน
 function formatAiText(text) {
     if (!text) return '';
-    const escapeHtml = (value) => value
+    
+    // Escaped HTML
+    const escapeHtml = (val) => val
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/>/g, '&gt;');
 
-    return escapeHtml(text)
-        .replace(/^An analysis of.*?:\s*/gim, '')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .trim();
+    let cleanText = escapeHtml(text).trim();
+    
+    // แปลง Markdown Bold (**ข้อความ**) ให้เป็น <strong>
+    cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // แยกเป็นบรรทัดตามตัวเลขข้อ (1. 2. 3. 4.) หรือการขึ้นบรรทัดใหม่
+    const lines = cleanText.split('\n').filter(line => line.trim() !== '');
+    
+    let htmlOutput = '';
+    lines.forEach(line => {
+        htmlOutput += `<div class="item">${line}</div>`;
+    });
+    
+    return htmlOutput;
 }
 
 // 3. Fetch AI Strategic Analysis แบบ Async หลังหน้าเว็บโหลดเสร็จ
