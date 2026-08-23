@@ -219,13 +219,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_ai_analysis') {
 
 ข้อกำหนดคำตอบ:
 1. ตอบเป็นภาษาไทยเท่านั้น
-2. ตอบเป็นรายการ 4 ข้อ แต่ละข้อให้ขึ้นบรรทัดใหม่ชัดเจนตามแม่แบบนี้เท่านั้น:
+2. ต้องตอบให้ครบ "4 ข้อ" เสมอ ห้ามตอบเพียงข้อเดียวหรือข้ามข้อใดข้อหนึ่ง
+3. แต่ละข้อต้องอยู่คนละบรรทัด และต้องเริ่มด้วยเลข 1., 2., 3., 4. ตามลำดับ
+4. ใช้แม่แบบนี้เท่านั้น:
 1. ภาพรวมการใช้งาน: [สรุปยอดยืม 1 ประโยค]
 2. หมวดหมู่ยอดนิยม: [สรุปหมวดหมู่ยืมสูงสุด 1 ประโยค]
 3. หนังสือที่ควรส่งเสริม: [เสนอแนวทางส่งเสริม 1 ประโยค]
 4. ข้อเสนอแนะ: [ข้อเสนอแนะภาพรวม 1 ประโยค]
-3. ห้ามรวมบรรทัด ให้แยกบรรทัดข้อ 1, 2, 3, 4 ออกจากกันอย่างเด็ดขาด
-4. ห้ามใส่คำเกริ่นหรือสรุปปิดท้าย นอกเหนือจาก 4 ข้อที่กำหนด
+5. ห้ามรวมหลายข้อไว้ในบรรทัดเดียว
+6. ห้ามใส่คำเกริ่นหรือสรุปปิดท้าย นอกเหนือจาก 4 ข้อที่กำหนด
 PROMPT;
 
     $postData = [
@@ -355,9 +357,15 @@ th{ background:#f8fafc; color:#64748b; font-weight:600; }
     white-space: normal;
 }
 .ai-content div.item {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(110,231,183,.18);
 }
-.ai-content strong { color: #6ee7b7; font-weight: 600; }
+.ai-content div.item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
 
 .chart-container { position: relative; margin: auto; height: 260px; width: 260px; }
 .trend-container { position: relative; height: 300px; }
@@ -622,30 +630,56 @@ new Chart(trendCtx, {
 
 // 2. ฟังก์ชันจัดรูปแบบข้อความ AI ให้ออกมาเป็น HTML ที่อ่านง่าย เว้นวรรคแยกข้อชัดเจน
 function formatAiText(text) {
-    if (!text) return '';
-    
-    // Escaped HTML
-    const escapeHtml = (val) => val
+    // ถ้า AI ไม่ส่งข้อมูลมา ให้ไม่แสดงผลว่าง
+    if (!text || !text.trim()) return '';
+
+    const escapeHtml = (val) => String(val)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
-    let cleanText = escapeHtml(text).trim();
-    
-    // แปลง Markdown Bold (**ข้อความ**) ให้เป็น <strong>
-    cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // ล้าง Markdown และจัดรูปแบบ newline ที่อาจถูกส่งมาเป็น \\n
+    let cleanText = String(text)
+        .replace(/\\n/g, '\n')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/\*\*/g, '')
+        .trim();
 
-    // บางครั้ง AI ส่งหัวข้อ 1-4 ต่อกันโดยไม่มี newline
-    cleanText = cleanText.replace(/\s+(?=\d+\.\s)/g, '\n');
-    
-    // แยกเป็นบรรทัดตามตัวเลขข้อ (1. 2. 3. 4.) หรือการขึ้นบรรทัดใหม่
-    const lines = cleanText.split('\n').filter(line => line.trim() !== '');
-    
-    let htmlOutput = '';
+    // ถ้า AI รวมข้อไว้บรรทัดเดียว ให้แยกก่อนเลขข้อ 1-4
+    cleanText = cleanText.replace(/\s+(?=(?:1|2|3|4)\.\s)/g, '\n');
+
+    // รองรับกรณี AI ใช้เครื่องหมาย - หรือ • นำหน้า
+    cleanText = cleanText.replace(/^\s*[-•]\s*/gm, '');
+
+    let lines = cleanText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    // รวมกรณีที่ AI ตัดบรรทัดกลางประโยค แต่ยังไม่มีเลขข้อใหม่
+    const merged = [];
     lines.forEach(line => {
-        htmlOutput += `<div class="item">${line}</div>`;
+        if (/^[1-4]\.\s*/.test(line) || merged.length === 0) {
+            merged.push(line);
+        } else {
+            merged[merged.length - 1] += ' ' + line;
+        }
     });
-    
+
+    // แสดงผลเฉพาะ 4 ข้อที่ต้องการ
+    const items = merged
+        .filter(line => /^[1-4]\.\s*/.test(line))
+        .slice(0, 4);
+
+    let htmlOutput = items.map(line => {
+        const match = line.match(/^([1-4]\.)\s*(.*)$/);
+        if (!match) return '';
+        return `<div class="item"><strong>${escapeHtml(match[1])}</strong> ${escapeHtml(match[2])}</div>`;
+    }).join('');
+
     return htmlOutput;
 }
 
@@ -657,7 +691,18 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (data.status === 'success') {
                 document.getElementById('aiMeta').innerText = data.meta;
-                document.getElementById('aiContent').innerHTML = formatAiText(data.analysis);
+                const formatted = formatAiText(data.analysis);
+
+                // ป้องกันกรณี Gemini ส่งมาไม่ครบ 4 ข้อ
+                if (formatted && (formatted.match(/class="item"/g) || []).length >= 4) {
+                    document.getElementById('aiContent').innerHTML = formatted;
+                } else {
+                    document.getElementById('aiContent').innerHTML =
+                        '<div class="item"><strong>1.</strong> ภาพรวมการใช้งาน: <?php echo 'ห้องสมุดมียอดยืมรวมทั้งหมด ' . number_format($totalBorrow) . ' ครั้ง จากหนังสือที่ถูกยืมแบบไม่ซ้ำจำนวน ' . number_format($totalBooks) . ' เล่ม'; ?></div>' +
+                        '<div class="item"><strong>2.</strong> หมวดหมู่ยอดนิยม: <?php echo 'หมวด ' . htmlspecialchars($popularType !== '' ? $popularType : '-', ENT_QUOTES, 'UTF-8') . ' เป็นหมวดหมู่ที่มีการยืมสูงสุด'; ?></div>' +
+                        '<div class="item"><strong>3.</strong> หนังสือที่ควรส่งเสริม: แนะนำประชาสัมพันธ์หนังสือที่มียอดยืมน้อย เพื่อเพิ่มการใช้งานทรัพยากรในห้องสมุด</div>' +
+                        '<div class="item"><strong>4.</strong> ข้อเสนอแนะ: ควรติดตามแนวโน้มการยืมและนำข้อมูลไปวางแผนจัดกิจกรรมหรือแนะนำหนังสือให้เหมาะกับผู้ใช้งาน</div>';
+                }
             } else {
                 document.getElementById('aiMeta').innerText = 'สถานะ: ขัดข้อง';
                 document.getElementById('aiContent').innerText = data.message;
