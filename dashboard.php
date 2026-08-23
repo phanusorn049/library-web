@@ -326,10 +326,10 @@ select{ background:white; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.05);
 .card p{ margin:0 0 6px 0; color:#64748b; font-size:13px; font-weight:500; text-transform:uppercase; }
 .card h2{ margin:0; font-size:28px; color:#0f172a; font-weight:700; }
 
-.grid{ display:grid; grid-template-columns:2fr 1fr; gap:24px; margin-bottom:24px; align-items: start; }
+.grid{ display:grid; grid-template-columns:minmax(0, 2fr) minmax(0, 1fr); gap:24px; margin-bottom:24px; align-items: start; }
 @media (max-width: 968px) { .grid { grid-template-columns: 1fr; } }
 
-.panel{ background:white; padding:24px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+.panel{ min-width:0; background:white; padding:24px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
 .panel h2{ margin-top:0; margin-bottom:20px; font-size:16px; font-weight:600; color:#334155; border-bottom:1px solid #f1f5f9; padding-bottom:12px; }
 table{ width:100%; border-collapse:collapse; }
 th,td{ padding:12px; border-bottom:1px solid #f1f5f9; text-align:left; font-size:14px; }
@@ -340,6 +340,7 @@ th{ background:#f8fafc; color:#64748b; font-weight:600; }
 .ai { 
     background: #064e3b; 
     color: #ecfdf5; 
+    align-self: start;
     height: auto !important; 
     min-height: 0;
     max-height: none !important; 
@@ -350,6 +351,7 @@ th{ background:#f8fafc; color:#64748b; font-weight:600; }
     font-size: 14px; 
     line-height: 1.8; 
     word-break: break-word;
+    overflow-wrap: anywhere;
     white-space: normal;
 }
 .ai-content div.item {
@@ -632,6 +634,9 @@ function formatAiText(text) {
     
     // แปลง Markdown Bold (**ข้อความ**) ให้เป็น <strong>
     cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // บางครั้ง AI ส่งหัวข้อ 1-4 ต่อกันโดยไม่มี newline
+    cleanText = cleanText.replace(/\s+(?=\d+\.\s)/g, '\n');
     
     // แยกเป็นบรรทัดตามตัวเลขข้อ (1. 2. 3. 4.) หรือการขึ้นบรรทัดใหม่
     const lines = cleanText.split('\n').filter(line => line.trim() !== '');
