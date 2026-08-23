@@ -5,19 +5,23 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
         'httponly' => true,
         'samesite' => 'Lax',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
     ]);
     session_start();
 }
 
+// ---------------- Security Headers & CSP Configuration ----------------
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Permissions-Policy: camera=(), microphone=(), geolocation=()");
-header("Content-Security-Policy: default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+
+// อนุญาต connect-src ไปยัง Google Gemini API และปรับแต่ง CSP ให้ครอบคลุม CDN
+header("Content-Security-Policy: default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
+// ---------------- Database Configuration ----------------
 function database_config(): array
 {
     $fileConfig = [];
@@ -30,12 +34,12 @@ function database_config(): array
     }
 
     return [
-        'host' => getenv('DB_HOST') ?: ($fileConfig['host'] ?? 'localhost'),
-        'user' => getenv('DB_USER') ?: ($fileConfig['user'] ?? 'root'),
+        'host'     => getenv('DB_HOST') ?: ($fileConfig['host'] ?? 'localhost'),
+        'user'     => getenv('DB_USER') ?: ($fileConfig['user'] ?? 'root'),
         'password' => getenv('DB_PASS') ?: ($fileConfig['password'] ?? 'root'),
         'database' => getenv('DB_NAME') ?: ($fileConfig['database'] ?? 'library_project'),
-        'port' => (int)(getenv('DB_PORT') ?: ($fileConfig['port'] ?? 8889)),
-        'ssl' => getenv('DB_SSL') === '1' || ($fileConfig['ssl'] ?? false) === true,
+        'port'     => (int)(getenv('DB_PORT') ?: ($fileConfig['port'] ?? 8889)),
+        'ssl'      => getenv('DB_SSL') === '1' || ($fileConfig['ssl'] ?? false) === true,
     ];
 }
 
@@ -52,11 +56,23 @@ function db(): mysqli
     if ($config['ssl']) {
         mysqli_ssl_set($connection, null, null, __DIR__ . '/certs/cacert.pem', null, null);
     }
-    mysqli_real_connect($connection, $config['host'], $config['user'], $config['password'], $config['database'], $config['port'], null, $config['ssl'] ? MYSQLI_CLIENT_SSL : 0);
+    
+    mysqli_real_connect(
+        $connection, 
+        $config['host'], 
+        $config['user'], 
+        $config['password'], 
+        $config['database'], 
+        $config['port'], 
+        null, 
+        $config['ssl'] ? MYSQLI_CLIENT_SSL : 0
+    );
+    
     mysqli_set_charset($connection, 'utf8mb4');
     return $connection;
 }
 
+// ---------------- Security & Auth Helpers ----------------
 function csrf_token(): string
 {
     if (empty($_SESSION['csrf_token'])) {
