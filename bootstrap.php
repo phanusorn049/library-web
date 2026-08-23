@@ -40,6 +40,7 @@ function database_config(): array
         'database' => getenv('DB_NAME') ?: ($fileConfig['database'] ?? 'library_project'),
         'port'     => (int)(getenv('DB_PORT') ?: ($fileConfig['port'] ?? 8889)),
         'ssl'      => getenv('DB_SSL') === '1' || ($fileConfig['ssl'] ?? false) === true,
+        'ssl_ca'   => getenv('DB_SSL_CA') ?: ($fileConfig['ssl_ca'] ?? __DIR__ . '/certs/cacert.pem'),
     ];
 }
 
@@ -54,7 +55,8 @@ function db(): mysqli
 
     $connection = mysqli_init();
     if ($config['ssl']) {
-        mysqli_ssl_set($connection, null, null, __DIR__ . '/certs/cacert.pem', null, null);
+        $caFile = is_file($config['ssl_ca']) ? $config['ssl_ca'] : null;
+        mysqli_ssl_set($connection, null, null, $caFile, null, null);
     }
     
     mysqli_real_connect(

@@ -61,7 +61,7 @@ if (!in_array($filter, array_merge(['all'], array_keys($daysMapping)), true)) {
 $isFiltered = array_key_exists($filter, $daysMapping);
 if ($isFiltered) {
     $days = $daysMapping[$filter];
-    $timeCondition = "borrow_date >= DATE_SUB(?, INTERVAL ? DAY)";
+    $timeCondition = "borrow_date >= ?";
 } else {
     $timeCondition = "1=1";
 }
@@ -69,7 +69,8 @@ if ($isFiltered) {
 function executeDynamicQuery($conn, $sql, $isFiltered, $baseDate, $days) {
     $stmt = mysqli_prepare($conn, $sql);
     if ($isFiltered) {
-        mysqli_stmt_bind_param($stmt, "si", $baseDate, $days);
+        $cutoffDate = (new DateTimeImmutable($baseDate))->modify("-$days days")->format('Y-m-d');
+        mysqli_stmt_bind_param($stmt, "s", $cutoffDate);
     }
     mysqli_stmt_execute($stmt);
     return $stmt;
@@ -124,7 +125,7 @@ $leastBorrowResult = mysqli_stmt_get_result($stmtLeast);
 
 // 7. วิเคราะห์แนวโน้มและโอกาสในการส่งเสริมหนังสือที่ใช้น้อย
 $historyTimeCondition = $isFiltered
-    ? "h.borrow_date >= DATE_SUB(?, INTERVAL ? DAY)"
+    ? "h.borrow_date >= ?"
     : "1=1";
 
 $sqlTrend = "SELECT DATE_FORMAT(h.borrow_date, '%Y-%m') AS period, COUNT(*) AS total
